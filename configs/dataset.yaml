@@ -1,6 +1,6 @@
-train: ../data/train/images
-val: ../data/valid/images
-test: ../data/test/images
+train: /content/drive/MyDrive/colab_data/odt/data/train/images
+val: /content/drive/MyDrive/colab_data/odt/data/valid/images
+test: /content/drive/MyDrive/colab_data/odt/data/test/images
 
 nc: 8
 names: ['Parking', 'Speed Limit', 'Speed limit', 'Traffic-Light', 'cross walk', 'speed limit', 'speed- limit', 'stop']
