@@ -6,7 +6,8 @@ from pathlib import Path
 DRIVE_MOUNT = "/content/drive"
 REPO_URL    = "https://github.com/Wangjx1995/Object_Detection_Tutorial.git"
 REPO_DIR    = "/content/Object_Detection_Tutorial"
-
+REAL_DRIVE = "/content/drive/MyDrive/odt_data/real"
+REAL_LINK  = f"{REPO_DIR}/real"
 # ===== CLI =====
 p = argparse.ArgumentParser(description="Colab starter for Object_Detection_Tutorial")
 p.add_argument("--mode", choices=["real", "mix"], default="real",
@@ -18,6 +19,8 @@ p.add_argument("--skip_drive", action="store_true",
 p.add_argument("--branch", default=None, help="可选：git 指定分支")
 p.add_argument("--no_requirements", action="store_true",
                help="跳过安装 requirements.txt")
+p.add_argument("--real_drive", default=None,
+               help="Drive 上真实数据目录（含 images/labels/dataset.yaml），将链接到仓库 real/ 下。")               
 args = p.parse_args()
 
 def run(cmd, check=True, cwd=None):
@@ -54,8 +57,15 @@ run("python -m pip install -U ultralytics pillow numpy", check=False)
 
 
 if args.mode == "real":
-    DATASET_YAML = args.dataset_yaml
-    TRAIN_CMD    = f"python src/train.py --data '{DATASET_YAML}'"
+    if getattr(args, "real_drive", None):
+        REAL_LINK = f"{REPO_DIR}/real"
+        run(f"[ -L '{REAL_LINK}' ] && unlink '{REAL_LINK}' || rm -rf '{REAL_LINK}'", check=False, cwd="/")
+        run(f"ln -s '{args.real_drive}' '{REAL_LINK}'", cwd="/")
+        DATASET_YAML = "real/dataset.yaml"           
+    else:
+        DATASET_YAML = args.dataset_yaml
+
+    TRAIN_CMD = f"python src/train.py --data '{DATASET_YAML}'"
     run(TRAIN_CMD, cwd=REPO_DIR)
 
 elif args.mode == "mix":
