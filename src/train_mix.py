@@ -96,9 +96,13 @@ def main():
     for ep in range(EPOCHS):
         print(f"\n========== Epoch {ep+1}/{EPOCHS} ==========")
         ep_out = OUT_BASE / f"ep_{ep:03d}"
+        if ep_out.exists():
+            shutil.rmtree(ep_out)
+        ep_out.mkdir(parents=True, exist_ok=True)
 
         mix = {}
         for sp in splits:
+            seed_offset = {"train": 0, "val": 100_000, "test": 200_000}[sp]
             R = len(real_lists[sp])
             S = synth_needed(R)
             print(f"[{sp}] real={R} -> synth={S}")
@@ -115,7 +119,7 @@ def main():
                 per_class_min_max=PER_CLASS_MINMAX,
                 allow_overlap=ALLOW_OVERLAP,
                 yaml_abs=True,
-                seed=ep + 2025,   # change seed each epoch
+                seed=ep + 2025 + seed_offset,   # change seed each epoch
             )
             gen.generate_dataset(cfg)
             synth_dir = ep_out/"images"/sp
@@ -145,7 +149,10 @@ def main():
             imgsz=IMGSZ,
             batch=BATCH,
             device=DEVICE,
-            resume=True if ep>0 else False,
+            resume=False,                
+            project="runs/mix",
+            name="exp",
+            exist_ok=True,
             verbose=True,
         )
 

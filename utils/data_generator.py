@@ -36,7 +36,7 @@ class GenConfig:
     out_dir: str = "out"
     image_size: Tuple[int,int] = (1280,720)
     num_images: int = 200
-    splits: Tuple[float,float,float] = (0.8,0.1,0.1)
+    splits: Tuple[float,float,float] = (0.7,0.2,0.1)
     train_count: Optional[int] = None
     val_count: Optional[int] = None
     test_count: Optional[int] = None
@@ -211,7 +211,7 @@ def iou(a,b):
 
 def yolo_line(cid, box, size):
     W,H=size; x0,y0,x1,y1=box
-    w=x1-x0; h=y1-y0; cx=x0+w/2.0; cy=y0+w*0+ h/2.0
+    w=x1-x0; h=y1-y0; cx=x0+w/2.0; cy=y0+h/2.0
     return f"{cid} {cx/W:.6f} {cy/H:.6f} {w/W:.6f} {h/H:.6f}"
 
 def plan_counts(class_names, cfg):
@@ -349,8 +349,10 @@ def generate_dataset(cfg: GenConfig):
         f"nc: {len(names)}\n"
         f"names: {json.dumps(names, ensure_ascii=False)}\n"
     )
-    with open(os.path.join(cfg.out_dir,'dataset.yaml'),'w',encoding='utf-8') as f: f.write(yaml)
+    yaml_path = os.path.join(cfg.out_dir,'dataset.yaml')
+    with open(yaml_path,'w',encoding='utf-8') as f: f.write(yaml)
     print('[DONE] images:', img_id)
+    return os.path.abspath(yaml_path)
 
 def parse_args():
     p = argparse.ArgumentParser()
@@ -359,9 +361,10 @@ def parse_args():
     p.add_argument("--image_width", type=int, default=1280)
     p.add_argument("--image_height", type=int, default=720)
     p.add_argument("--num_images", type=int, default=200)
-    p.add_argument("--train_ratio", type=float, default=0.8)
-    p.add_argument("--val_ratio", type=float, default=0.1)
+    p.add_argument("--train_ratio", type=float, default=0.7)
+    p.add_argument("--val_ratio", type=float, default=0.2)
     p.add_argument("--test_ratio", type=float, default=0.1)
+    p.add_argument("--seed", type=int, default=2025)
     p.add_argument("--train_count", type=int, default=None)
     p.add_argument("--val_count", type=int, default=None)
     p.add_argument("--test_count", type=int, default=None)
@@ -380,6 +383,7 @@ def parse_args():
         image_size=(args.image_width, args.image_height),
         num_images=args.num_images,
         splits=(args.train_ratio, args.val_ratio, args.test_ratio),
+        seed=args.seed,
         train_count=args.train_count,
         val_count=args.val_count,
         test_count=args.test_count,
@@ -400,7 +404,31 @@ def parse_args():
             cfg.per_class_min_max=norm
         except Exception as e: print("[WARN] parse --per_class_min_max failed:", e)
     return cfg
+def generate_dataset_for_epoch(
+    epoch_idx: int,
+    base_out: str = "data/_generated",
+    num_images: int = 300,
+    splits: Tuple[float,float,float] = (0.7,0.2,0.1),
+    seed_base: int = 2025,
+    assets_dir: str = "assets",
+    image_size: Tuple[int,int] = (1280,720),
+    yaml_abs: bool = False,
+    **overrides
+):
 
+    out_dir = os.path.join(base_out, f"epoch_{epoch_idx:03d}")
+    cfg = GenConfig(
+        assets_dir=assets_dir,
+        out_dir=out_dir,
+        image_size=image_size,
+        num_images=num_images,
+        splits=splits,
+        yaml_abs=yaml_abs,
+        seed=seed_base + epoch_idx,
+        **overrides
+    )
+    return generate_dataset(cfg)
+    
 if __name__=="__main__":
     cfg=parse_args()
     generate_dataset(cfg)
