@@ -72,7 +72,7 @@ def run_mixed(args):
         print("   • mix_valtest = True")
 
     mix_cmd = [
-        "python", "-m","src/train_mix.py",
+        "python", "-m","src.train_mix",
         "--real_root",  real_root,
         "--assets_dir", assets_dir,
         "--out_base",   out_base,
