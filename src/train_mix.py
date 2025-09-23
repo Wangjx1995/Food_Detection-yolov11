@@ -175,33 +175,37 @@ def main():
             mix[sp] = mixed
 
         # Write file lists & yaml
-        tl = workdir/f"train_ep{ep:03d}.txt"
-        vl = workdir/f"val_ep{ep:03d}.txt"
-        te = workdir/f"test_ep{ep:03d}.txt"
-        write_list(mix["train"], tl); write_list(mix["val"], vl); write_list(mix["test"], te)
+        tl = workdir / f"train_ep{ep:03d}.txt"
+        vl = workdir / f"val_ep{ep:03d}.txt"
+        te = workdir / f"test_ep{ep:03d}.txt"
+        write_list(mix["train"], tl)
+        write_list(mix["val"],   vl)
+        write_list(mix["test"],  te)
 
-        yaml = workdir/f"dataset_ep{ep:03d}.yaml"
-        yaml.write_text(
-            "train: "+str(tl.resolve()).replace("\\","/")+"\n"+
-            "val: "+str(vl.resolve()).replace("\\","/")+"\n"+
-            "test: "+str(te.resolve()).replace("\\","/")+"\n"+
-            f"nc: {len(names)}\n"+
-            f"names: {json.dumps(names, ensure_ascii=False)}\n",
-            encoding="utf-8"
-        )
-        yaml_path.write_text(yaml.safe_dump(yaml_content, allow_unicode=True, sort_keys=False), encoding="utf-8")
+        
+        ds_meta = {
+            "train": str(tl.resolve()).replace("\\", "/"),
+            "val":   str(vl.resolve()).replace("\\", "/"),
+            "test":  str(te.resolve()).replace("\\", "/"),
+            "nc":    len(names),
+            "names": names,
+        }
+        ds_yaml = workdir / f"dataset_ep{ep:03d}.yaml"
+        ds_yaml.write_text(yaml.safe_dump(ds_meta, allow_unicode=True, sort_keys=False), encoding="utf-8")
+
         model.train(
-            data=str(yaml),
+            data=str(ds_yaml),
             epochs=1,
             imgsz=IMGSZ,
             batch=BATCH,
             device=str(DEVICE),
-            resume=False,                
+            resume=False,
             project="runs/mix",
             name="exp",
             exist_ok=True,
             verbose=True,
         )
+
 
     print("Done. Check runs/detect/train for weights and metrics.")
     print(f"(Lists/YAML per epoch are under {workdir.as_posix()})")
