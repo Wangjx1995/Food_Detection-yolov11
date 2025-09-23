@@ -56,6 +56,7 @@ def run_real(args):
 def run_mixed(args):
     
     repo_root = Path(args.repo_dir).resolve()
+    os.environ["PYTHONPATH"] = repo_root.as_posix()
     real_root  = args.real_root  or (repo_root / "real").as_posix()
     assets_dir = args.assets_dir or (repo_root / "assets").as_posix()
     out_base   = args.out_base   or (repo_root / "out_epoch").as_posix()
@@ -71,7 +72,7 @@ def run_mixed(args):
         print("   • mix_valtest = True")
 
     mix_cmd = [
-        "python", "src/train_mix.py",
+        "python", "-m","src/train_mix.py",
         "--real_root",  real_root,
         "--assets_dir", assets_dir,
         "--out_base",   out_base,
