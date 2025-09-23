@@ -33,14 +33,13 @@ def run(cmd, check=True, cwd=None):
         raise SystemExit(r.returncode)
 
 def run_real(args):
-    # 你的全真实训练入口（保持原状）
-    from src.train import run as run_real  # 举例
+    from src.train import run as run_real
     print("✅ Entered REAL mode")
-    run_real(args)  # 或者调用你原来的 real 训练脚本
+    run_real(args)
     print("🏁 REAL training finished.")
 
 def run_mixed(args):
-    # 直接调用 train_mix.py 的 main，并透传路径参数
+
     from src.train_mix import main as run_mix
     print("✅ Entered MIXED mode")
     print(f"   • real_root   = {args.real_root}")
@@ -69,6 +68,7 @@ def run_mixed(args):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", choices=["real","mixed"], default="real")
+    ap.add_argument("--data", "--dataset_yaml", dest="data", default=None,help="Path to dataset.yaml for REAL mode (overrides --real_root)")
     ap.add_argument("--real_root",  default=str((PROJECT_ROOT/"real").resolve()))
     ap.add_argument("--assets_dir", default=str((PROJECT_ROOT/"assets").resolve()))
     ap.add_argument("--out_base",   default=str((PROJECT_ROOT/"out_epoch").resolve()))
