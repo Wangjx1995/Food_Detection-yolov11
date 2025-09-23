@@ -9,6 +9,7 @@ REPO_DIR    = "/content/Object_Detection_Tutorial"
 REAL_DRIVE = "/content/drive/MyDrive/odt_data/real"
 REAL_LINK  = f"{REPO_DIR}/real"
 PROJECT_ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(PROJECT_ROOT))
 # ===== CLI =====
 p = argparse.ArgumentParser(description="Colab starter for Object_Detection_Tutorial")
 p.add_argument("--mode", choices=["real", "mix"], default="real",
