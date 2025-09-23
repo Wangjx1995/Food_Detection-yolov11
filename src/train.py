@@ -43,8 +43,8 @@ def run(args):
     print(f"   • imgsz/batch/epochs = {cfg.get('imgsz', 512)}/{cfg.get('batch', 16)}/{cfg.get('epochs', 15)}")
 
 
-seed = int(cfg.get("seed", 42))
-try:
+    seed = int(cfg.get("seed", 42))
+    try:
     import random, numpy as np
     random.seed(seed); np.random.seed(seed); torch.manual_seed(seed)
     if torch.cuda.is_available(): torch.cuda.manual_seed_all(seed)
@@ -58,13 +58,13 @@ try:
         batch=int(cfg.get("batch", 16)),
         patience=int(cfg.get("patience", 5)),
         workers=int(cfg.get("workers", 2)),
-        device=dev,                                # [CHANGE]
+        device=dev,                                
         project=str(cfg.get("project", "runs")),
         name=str(cfg.get("name", "train")),
         cache=cfg.get("cache", "ram"),
         plots=bool(cfg.get("plots", True)),
         seed=seed,
-        exist_ok=True,                             # [CHANGE] 省去因重名报错
+        exist_ok=True,                             
         verbose=True,
     )
     print("🏁 REAL training finished. Saved to:", results.save_dir)
