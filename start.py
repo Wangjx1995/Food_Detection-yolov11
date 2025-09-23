@@ -54,9 +54,19 @@ def run_real(args):
     print("🏁 REAL training finished.")
 
 def run_mixed(args):
-    
+    from pathlib import Path
     repo_root = Path(args.repo_dir).resolve()
-    os.environ["PYTHONPATH"] = repo_root.as_posix()
+
+    
+    (repo_root / "src").mkdir(exist_ok=True)
+    (repo_root / "src" / "__init__.py").touch()
+    (repo_root / "utils").mkdir(exist_ok=True)
+    (repo_root / "utils" / "__init__.py").touch()
+
+    
+    os.environ["PYTHONPATH"] = f"{repo_root.as_posix()}:{os.environ.get('PYTHONPATH','')}"
+
+    
     real_root  = args.real_root  or (repo_root / "real").as_posix()
     assets_dir = args.assets_dir or (repo_root / "assets").as_posix()
     out_base   = args.out_base   or (repo_root / "out_epoch").as_posix()
@@ -71,8 +81,22 @@ def run_mixed(args):
     if args.mix_valtest:
         print("   • mix_valtest = True")
 
+    run(
+        "python - <<'PY'\n"
+        "import os, sys\n"
+        "print('CWD =', os.getcwd())\n"
+        "print('sys.path[0] =', sys.path[0])\n"
+        "print('PYTHONPATH =', os.environ.get('PYTHONPATH'))\n"
+        "import src, utils\n"
+        "print('src =', getattr(src,'__file__',src))\n"
+        "print('utils =', getattr(utils,'__file__',utils))\n"
+        "PY",
+        cwd=repo_root.as_posix()
+    )
+
+    
     mix_cmd = [
-        "python", "-m","src.train_mix",
+        "python", "-m", "src.train_mix",
         "--real_root",  real_root,
         "--assets_dir", assets_dir,
         "--out_base",   out_base,
@@ -82,10 +106,36 @@ def run_mixed(args):
     if args.mix_valtest:
         mix_cmd.append("--mix_valtest")
 
-    run(" ".join(mix_cmd), cwd=repo_root.as_posix())
+    try:
+        run(" ".join(mix_cmd), cwd=repo_root.as_posix())
+    except SystemExit as e:
+        print(f"⚠️ Module run failed (exit={e.code}), fallback to runpy path-run ...")
+        argv = [
+            "--real_root",  real_root,
+            "--assets_dir", assets_dir,
+            "--out_base",   out_base,
+            "--weights",    weights,
+            "--device",     str(args.device),
+        ]
+        if args.mix_valtest:
+            argv.append("--mix_valtest")
+
+        fallback = (
+            "python - <<'PY'\n"
+            "import os, sys, runpy\n"
+            f"repo = r'''{repo_root.as_posix()}'''\n"
+            "sys.path.insert(0, repo)\n"
+            "os.chdir(repo)\n"
+            f"sys.argv = ['src/train_mix.py'] + {argv!r}\n"
+            "runpy.run_path(os.path.join(repo, 'src', 'train_mix.py'), run_name='__main__')\n"
+            "PY"
+        )
+        run(fallback, cwd=repo_root.as_posix())
+
     print("🏁 MIXED training finished.")
     print("   • Weights & metrics: runs/mix/exp*")
     print("   • Per-epoch lists & YAML: epoch_work/")
+
 
 def main():
     ap = argparse.ArgumentParser(description="Colab starter for Object_Detection_Tutorial")
