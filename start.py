@@ -112,6 +112,8 @@ def main():
     ap.add_argument("--weights",    default=str((PROJECT_ROOT/"yolo11n.pt").resolve()))
     ap.add_argument("--device",     default="0")
     ap.add_argument("--mix_valtest", action="store_true")
+    ap.add_argument("--no_requirements",action="store_true",help="skip requirements"
+)
     args = ap.parse_args()
 
     if args.mode == "mixed":
