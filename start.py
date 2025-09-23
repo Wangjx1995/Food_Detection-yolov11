@@ -139,16 +139,25 @@ if args.branch:
 run(clone_cmd)
 
 
+
 run("python -m pip install -U pip")
+
+
 if not args.no_requirements:
-    run(f"python -m pip install -r '{REPO_DIR}/requirements.txt'")
+    run(f"python -m pip install --no-cache-dir --upgrade --force-reinstall -r '{REPO_DIR}/requirements.txt'")
 
 
 run("python -m pip install -U ultralytics pillow pyyaml", check=False)
 
-run("python -m pip install --upgrade --force-reinstall --no-cache-dir 'numpy>=2.1.1,<3' 'matplotlib>=3.9,<3.10'", check=True)
 
-run("python - <<'PY'\nimport os, pathlib\nos.environ.setdefault('MPLCONFIGDIR','/tmp/matplotlib')\npathlib.Path('/tmp/matplotlib').mkdir(exist_ok=True)\nprint('MPLCONFIGDIR=', os.environ['MPLCONFIGDIR'])\nPY")
+run("python -m pip uninstall -y numpy matplotlib", check=False)
+run("python -m pip install --no-cache-dir --upgrade --force-reinstall --no-deps numpy==2.1.2 matplotlib==3.9.2", check=True)
+
+
+run("python -c \"import os, pathlib; os.environ.setdefault('MPLCONFIGDIR','/tmp/mpl'); pathlib.Path('/tmp/mpl').mkdir(exist_ok=True); print('MPLCONFIGDIR=', os.environ['MPLCONFIGDIR'])\"")
+
+
+run("python -c \"import numpy, matplotlib; print('NumPy', numpy.__version__, 'Matplotlib', matplotlib.__version__)\"")
 
 
 
