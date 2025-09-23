@@ -140,13 +140,15 @@ def main():
         run(f"python -m pip install --no-cache-dir --upgrade --force-reinstall -r '{args.repo_dir}/requirements.txt'")
 
 
-    run("python - <<'PY'\n"
+    run(
+    "python - <<'PY'\n"
     "import site, shutil, os, glob\n"
-    "sp = site.getsitepackages()[0]\n"
-    "for pat in ('numpy*','scipy*','matplotlib*'):\n"
-    "    for p in glob.glob(os.path.join(sp, pat)):\n"
-    "        print('Removing', p); shutil.rmtree(p, ignore_errors=True)\n"
+    "for sp in site.getsitepackages():\n"
+    "    for pat in ('numpy*','scipy*','matplotlib*'):\n"
+    "        for p in glob.glob(os.path.join(sp, pat)):\n"
+    "            print('Removing', p); shutil.rmtree(p, ignore_errors=True)\n"
     "PY")
+
     run("python -m pip install --no-cache-dir --upgrade --force-reinstall --no-deps numpy==2.1.2 matplotlib==3.9.2 scipy==1.14.1")
     run("python -m pip install -U ultralytics pillow pyyaml", check=False)
     run('MPLBACKEND=Agg python -c \"import numpy,scipy,matplotlib; '
