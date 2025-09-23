@@ -3,6 +3,9 @@
 
 import os, sys, subprocess, argparse
 from pathlib import Path
+os.environ["MPLBACKEND"] = "Agg"              
+os.environ.setdefault("MPLCONFIGDIR", "/tmp/mpl")
+Path("/tmp/mpl").mkdir(exist_ok=True)
 
 def run(cmd: str, check: bool = True, cwd: str | None = None):
     print(f"$ {cmd}")
