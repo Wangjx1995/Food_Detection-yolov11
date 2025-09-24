@@ -4,10 +4,13 @@
 import os, sys, subprocess, argparse
 from pathlib import Path
 
-# Matplotlib headless
+# Matplotlib headless & cache dir
 os.environ["MPLBACKEND"] = "Agg"
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/mpl")
 Path("/tmp/mpl").mkdir(exist_ok=True)
+
+# ✅ 禁用 user-site，避免 ~/.local 里旧包“抢上车”
+os.environ["PYTHONNOUSERSITE"] = "1"
 
 def run(cmd: str, check: bool = True, cwd: str | None = None):
     print(f"$ {cmd}")
@@ -212,37 +215,68 @@ def main():
     if not args.no_requirements:
         run(f"python -m pip install --no-cache-dir --upgrade --force-reinstall -r '{args.repo_dir}/requirements.txt'")
 
-    # 清理并固定数值栈
+    # ========= 数值栈：彻底清理 + 固定版本重装 =========
+    # 先卸载（忽略失败）
+    run("python -m pip uninstall -y numpy scipy matplotlib ultralytics", check=False)
+
+    # 物理清理：site-packages + user-site + sysconfig 的 purelib/platlib
     run(
         "python - <<'PY'\n"
-        "import site, shutil, os, glob\n"
-        "for sp in site.getsitepackages():\n"
-        "    for pat in ('numpy*','scipy*','matplotlib*'):\n"
+        "import site, sysconfig, shutil, os, glob\n"
+        "dirs = set()\n"
+        "dirs.update(site.getsitepackages())\n"
+        "try:\n"
+        "    dirs.add(site.getusersitepackages())\n"
+        "except Exception:\n"
+        "    pass\n"
+        "paths = sysconfig.get_paths()\n"
+        "for k in ('purelib','platlib'):\n"
+        "    p = paths.get(k)\n"
+        "    if p: dirs.add(p)\n"
+        "print('🔧 purge dirs:', dirs)\n"
+        "PATTERNS = ('numpy*','scipy*','matplotlib*')\n"
+        "for sp in sorted(dirs):\n"
+        "    for pat in PATTERNS:\n"
         "        for p in glob.glob(os.path.join(sp, pat)):\n"
         "            print('Removing', p); shutil.rmtree(p, ignore_errors=True)\n"
-        "PY")
-    run("python -m pip install --no-cache-dir --upgrade --force-reinstall --no-deps numpy==2.1.2 matplotlib==3.9.2 scipy==1.14.1")
+        "PY"
+    )
 
-    # ✅ 如果仓库内 vendored 了 ultralytics，跳过 pip 版；否则安装官方包
+    # 固定版本重装（wheel-only，避免本地编译；不解析依赖链以免顶掉固定版本）
+    run(
+        "python -m pip install --only-binary=:all: --no-cache-dir --upgrade --force-reinstall --no-deps "
+        "numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2"
+    )
+
+    # 检测是否 vendored ultralytics（项目根或 src/ 下均支持）
     repo_root = Path(args.repo_dir)
     vendored_parent = None
     for cand in [repo_root / "ultralytics", repo_root / "src" / "ultralytics"]:
         if (cand / "__init__.py").exists():
             vendored_parent = cand.parent  # 项目根 或 项目根/src
             break
+
+    # 安装 ultralytics / 依赖（不关闭绘图）
     if vendored_parent:
         print(f"🔒 Detected vendored ultralytics at: {(vendored_parent/'ultralytics').as_posix()} (skip pip ultralytics)")
         run("python -m pip install -U pillow pyyaml", check=False)
         # 让后续子进程优先从本地导入
         os.environ["PYTHONPATH"] = f"{vendored_parent.as_posix()}:{os.environ.get('PYTHONPATH','')}"
     else:
-        run("python -m pip install -U ultralytics pillow pyyaml", check=False)
+        # 装官方包时使用 --no-deps，避免它把 numpy/scipy 又升级
+        run("python -m pip install -U --no-deps ultralytics", check=False)
+        run("python -m pip install -U pillow pyyaml", check=False)
 
-    # 数值栈健康检查
+    # 数值栈健康自检（包含 ndimage）
     run(
-        'MPLBACKEND=Agg python -c "import numpy,scipy,matplotlib; '
-        "from scipy.ndimage import gaussian_filter1d; "
-        "print('NumPy',numpy.__version__,'SciPy',scipy.__version__,'Matplotlib',matplotlib.__version__,'- ndimage OK')\""
+        'MPLBACKEND=Agg python - <<\"PY\"\\n'
+        'import numpy, scipy, matplotlib, inspect\\n'
+        'from scipy.ndimage import gaussian_filter1d\\n'
+        "print(f\"NumPy {numpy.__version__} | SciPy {scipy.__version__} | Matplotlib {matplotlib.__version__} - ndimage OK\")\\n"
+        'print(\"numpy at:\", inspect.getfile(numpy))\\n'
+        'print(\"scipy at:\", inspect.getfile(scipy))\\n'
+        'print(\"mpl   at:\", inspect.getfile(matplotlib))\\n'
+        'PY'
     )
 
     # 额外：打印将要使用的 ultralytics 来源（在仓库根执行以命中本地）
@@ -257,6 +291,7 @@ def main():
         "PY",
         cwd=repo_root.as_posix()
     )
+    # ========= /数值栈 =========
 
     # 分支执行
     if args.mode == "real":
