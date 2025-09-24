@@ -18,6 +18,11 @@ def run(cmd: str, check: bool = True, cwd: str | None = None):
     if check and r.returncode != 0:
         raise SystemExit(r.returncode)
 
+# 小助手：更安全地嵌入多行 Python（避免换行被写成 \n）
+def run_py(code: str, env: str = "", cwd: str | None = None, check: bool = True):
+    prefix = (env + " ") if env else ""
+    run(prefix + "python - <<'PY'\n" + code + "\nPY", check=check, cwd=cwd)
+
 def run_real(args):
     """仅触发一次全真实训练：import 调用 src/train.run(args)。"""
     from argparse import Namespace
@@ -32,15 +37,14 @@ def run_real(args):
         os.environ["PYTHONPATH"] = f"{(repo_root/'src').as_posix()}:{os.environ.get('PYTHONPATH','')}"
 
     # 自检：实际导入 ultralytics 来源
-    run(
-        "python - <<'PY'\n"
-        "import ultralytics; print('✅ ultralytics from:', ultralytics.__file__)\n"
+    run_py(
+        "import ultralytics\n"
+        "print('✅ ultralytics from:', ultralytics.__file__)\n"
         "try:\n"
         "  from ultralytics import __version__ as V\n"
         "  print('   version:', V)\n"
         "except Exception:\n"
-        "  pass\n"
-        "PY",
+        "  pass\n",
         cwd=repo_root.as_posix()
     )
 
@@ -104,8 +108,7 @@ def run_mixed(args):
         print("   • mix_valtest = True")
 
     # 预检：路径与包来源
-    run(
-        "python - <<'PY'\n"
+    run_py(
         "import os, sys\n"
         "print('CWD =', os.getcwd())\n"
         "print('sys.path[0] =', sys.path[0])\n"
@@ -114,8 +117,7 @@ def run_mixed(args):
         "print('src =', getattr(src,'__file__',src))\n"
         "print('utils =', getattr(utils,'__file__',utils))\n"
         "import ultralytics\n"
-        "print('✅ ultralytics from:', ultralytics.__file__)\n"
-        "PY",
+        "print('✅ ultralytics from:', ultralytics.__file__)\n",
         cwd=repo_root.as_posix()
     )
 
@@ -220,8 +222,7 @@ def main():
     run("python -m pip uninstall -y numpy scipy matplotlib ultralytics", check=False)
 
     # 物理清理：site-packages + user-site + sysconfig 的 purelib/platlib
-    run(
-        "python - <<'PY'\n"
+    run_py(
         "import site, sysconfig, shutil, os, glob\n"
         "dirs = set()\n"
         "dirs.update(site.getsitepackages())\n"
@@ -239,7 +240,6 @@ def main():
         "    for pat in PATTERNS:\n"
         "        for p in glob.glob(os.path.join(sp, pat)):\n"
         "            print('Removing', p); shutil.rmtree(p, ignore_errors=True)\n"
-        "PY"
     )
 
     # 固定版本重装（wheel-only，避免本地编译；不解析依赖链以免顶掉固定版本）
@@ -267,28 +267,26 @@ def main():
         run("python -m pip install -U --no-deps ultralytics", check=False)
         run("python -m pip install -U pillow pyyaml", check=False)
 
-    # 数值栈健康自检（包含 ndimage）
-    run(
-        'MPLBACKEND=Agg python - <<\"PY\"\\n'
-        'import numpy, scipy, matplotlib, inspect\\n'
-        'from scipy.ndimage import gaussian_filter1d\\n'
-        "print(f\"NumPy {numpy.__version__} | SciPy {scipy.__version__} | Matplotlib {matplotlib.__version__} - ndimage OK\")\\n"
-        'print(\"numpy at:\", inspect.getfile(numpy))\\n'
-        'print(\"scipy at:\", inspect.getfile(scipy))\\n'
-        'print(\"mpl   at:\", inspect.getfile(matplotlib))\\n'
-        'PY'
+    # 数值栈健康自检（包含 ndimage）——⚠️ 这里用 run_py，是真换行
+    run_py(
+        "import numpy, scipy, matplotlib, inspect\n"
+        "from scipy.ndimage import gaussian_filter1d\n"
+        "print(f\"NumPy {numpy.__version__} | SciPy {scipy.__version__} | Matplotlib {matplotlib.__version__} - ndimage OK\")\n"
+        "print('numpy at:', inspect.getfile(numpy))\n"
+        "print('scipy at:', inspect.getfile(scipy))\n"
+        "print('mpl   at:', inspect.getfile(matplotlib))\n",
+        env="MPLBACKEND=Agg"
     )
 
     # 额外：打印将要使用的 ultralytics 来源（在仓库根执行以命中本地）
-    run(
-        "python - <<'PY'\n"
-        "import ultralytics; print('✅ ultralytics from:', ultralytics.__file__)\n"
+    run_py(
+        "import ultralytics\n"
+        "print('✅ ultralytics from:', ultralytics.__file__)\n"
         "try:\n"
         "  from ultralytics import __version__ as V\n"
         "  print('   version:', V)\n"
         "except Exception:\n"
-        "  pass\n"
-        "PY",
+        "  pass\n",
         cwd=repo_root.as_posix()
     )
     # ========= /数值栈 =========
