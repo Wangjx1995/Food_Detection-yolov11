@@ -166,19 +166,17 @@ def main():
     ap = argparse.ArgumentParser(description="Colab starter for Food-Detection-yolov11")
     # BASIC
     ap.add_argument("--mode", choices=["real", "mixed"], default="real")
-    ap.add_argument("--skip_drive", action="store_true", help="不挂载 Google Drive")
-    ap.add_argument("--drive_mount", default="/content/drive", help="Drive 挂载点")
+    ap.add_argument("--skip_drive", action="store_true")
+    ap.add_argument("--drive_mount", default="/content/drive")
     ap.add_argument("--repo_url", default="https://github.com/Wangjx1995/Food_Detection-yolov11.git")
     ap.add_argument("--repo_dir", default="/content/Food_Detection-yolov11")
     ap.add_argument("--branch", default=None)
     ap.add_argument("--no_requirements", action="store_true",
-                    help="跳过安装 requirements.txt（已手动对齐 numpy/matplotlib 时很有用）")
+                    help="skip requirements.txt")
 
     # REAL
-    ap.add_argument("--data", "--dataset_yaml", dest="data", default=None,
-                    help="真实数据集 dataset.yaml 的绝对路径（优先级最高）")
-    ap.add_argument("--real_drive", default=None,
-                    help="真实数据根目录（含 images/labels/dataset.yaml）。若提供，将软链为 repo_dir/real/")
+    ap.add_argument("--data", "--dataset_yaml", dest="data", default=None)
+    ap.add_argument("--real_drive", default=None)
 
     # MIXED
     ap.add_argument("--real_root",  default=None)
@@ -201,7 +199,7 @@ def main():
             drive.mount(args.drive_mount, force_remount=False)
             print(f"✅ Drive mounted at: {args.drive_mount}")
         except Exception:
-            print("ℹ️ 非 Colab 或子进程：如需 Drive，请先在 Notebook 里 drive.mount('/content/drive')")
+            print("PLease mount in Notebook")
 
     
     run(f"rm -rf '{args.repo_dir}'", check=False)
